@@ -4,6 +4,7 @@ public class Ball {
   String ballId;
   Inning inning;
   int ballNumber;
+  BallType ballType;
   int bolwerId;
   int batsmenId;
   long ballDeliveredAtTime;
