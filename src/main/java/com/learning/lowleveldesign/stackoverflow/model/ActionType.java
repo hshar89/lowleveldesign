@@ -1,2 +1,5 @@
-package com.learning.lowleveldesign.stackoverflow.model;public class ActionType {
+package com.learning.lowleveldesign.stackoverflow.model;
+
+public enum ActionType {
+  UPVOTE, FLAG, VOTE;
 }
