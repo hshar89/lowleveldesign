@@ -1,2 +1,5 @@
-package com.learning.lowleveldesign.atmmachine.model;public enum CardType {
+package com.learning.lowleveldesign.atmmachine.model;
+
+public enum CardType {
+  DEBIT, CREDIT, AMAZONPAY;
 }

@@ -1,2 +1,5 @@
-package com.learning.lowleveldesign.atmmachine.model;public enum AccountType {
+package com.learning.lowleveldesign.atmmachine.model;
+
+public enum AccountType {
+  SAVING, CURRENT;
 }

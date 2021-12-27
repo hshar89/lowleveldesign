@@ -1,2 +1,5 @@
-package com.learning.lowleveldesign.chess;public class PieceColor {
+package com.learning.lowleveldesign.chess;
+
+public enum PieceColor {
+  WHITE, BLACK;
 }
