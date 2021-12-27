@@ -18,6 +18,10 @@ public abstract class ChessPiece {
     this.pieceStatus = PieceStatus.ACTIVE;
   }
 
+  public int getPieceId() {
+    return pieceId;
+  }
+
   public PieceStatus getPieceStatus() {
     return pieceStatus;
   }

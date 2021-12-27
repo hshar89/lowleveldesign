@@ -2,12 +2,13 @@ package com.learning.lowleveldesign.chess;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-public class DiagonalMove extends Move{
+public class DiagonalMove extends Move {
 
   private Integer amount;
   private Direction direction;
 
-  public DiagonalMove(Integer amount, Direction direction) {
+  public DiagonalMove(String playerId, Integer pieceId, Integer amount, Direction direction) {
+    super(playerId, pieceId);
     this.amount = amount;
     this.direction = direction;
   }

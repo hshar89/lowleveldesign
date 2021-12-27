@@ -11,13 +11,15 @@ public class ChessBoard {
   private String boardId;
   private String matchId;
   private Map<PieceColor, Boolean> deciderPieceStatus;
-  private BoardSquare[][] boardSquares;
+  private Cell[][] cells;
   private Map<PieceColor, List<ChessPiece>> piecesMap;
+  private List<Move> moveHistory;
   private Integer idGenerator;
 
   public ChessBoard(String matchId) {
     this.matchId = matchId;
-    this.boardSquares = new BoardSquare[8][8];
+    this.moveHistory = new ArrayList<>();
+    this.cells = new Cell[8][8];
     this.piecesMap = new HashMap<>();
     this.idGenerator = 1;
     this.piecesMap.put(PieceColor.BLACK, generatePieces(PieceColor.BLACK));
@@ -25,22 +27,26 @@ public class ChessBoard {
     this.deciderPieceStatus = new HashMap<>();
     deciderPieceStatus.put(PieceColor.WHITE, true);
     deciderPieceStatus.put(PieceColor.BLACK, true);
-    Horse.initialIzeInstanceWithMatch(matchId);
+    Knight.initialIzeInstanceWithMatch(matchId);
     King.initialIzeInstanceWithMatch(matchId);
   }
 
   private List<ChessPiece> generatePieces(PieceColor pieceColor) {
-    ChessPiece horse1 = Horse.getInstance(idGenerator++, matchId, pieceColor);
-    Pair<Integer, Integer> position = horse1.getCurrentLocation();
-    BoardSquare boardSquare = new BoardSquare(position.getKey(), position.getValue(), horse1);
-    boardSquares[position.getKey()][position.getValue()] = boardSquare;
-    ChessPiece horse2 = Horse.getInstance(idGenerator++, matchId, pieceColor);
-    position = horse2.getCurrentLocation();
-    boardSquare = new BoardSquare(position.getKey(), position.getValue(), horse1);
-    boardSquares[position.getKey()][position.getValue()] = boardSquare;
     List<ChessPiece> chessPieces = new ArrayList<>();
+    ChessPiece horse1 = Knight.getInstance(idGenerator++, matchId, pieceColor);
+    Pair<Integer, Integer> position = horse1.getCurrentLocation();
+    Cell cell1 = new Cell(position.getKey(), position.getValue(), horse1);
+    cells[position.getKey()][position.getValue()] = cell1;
+    ChessPiece horse2 = Knight.getInstance(idGenerator++, matchId, pieceColor);
+    position = horse2.getCurrentLocation();
+    Cell cell2 = new Cell(position.getKey(), position.getValue(), horse1);
+    cells[position.getKey()][position.getValue()] = cell2;
     chessPieces.add(horse1);
     chessPieces.add(horse2);
+    ChessPiece king1 = King.getInstance(idGenerator++, matchId, pieceColor);
+    position = king1.getCurrentLocation();
+    Cell cell3 = new Cell(position.getKey(), position.getValue(), king1);
+    cells[position.getKey()][position.getValue()] = cell3;
     return chessPieces;
   }
 
@@ -53,20 +59,24 @@ public class ChessBoard {
       return false;
     }
     Pair<Integer, Integer> currentCoordinates = chessPiece.getCurrentLocation();
-    BoardSquare boardSquare = boardSquares[currentCoordinates.getKey()][currentCoordinates.getValue()];
-    Pair<Integer, Integer> nextCoordinate =
+    Cell cell = cells[currentCoordinates.getKey()][currentCoordinates.getValue()];
+    Pair<Integer, Integer> nextCoordinates =
         move.getNextCoordinates(currentCoordinates.getKey(), currentCoordinates.getValue());
-    if (validatePosition(nextCoordinate, chessPiece.getPieceColor())) {
+    if (validatePosition(nextCoordinates, chessPiece.getPieceColor())) {
       return false;
     }
-    ChessPiece otherPiece = boardSquares[nextCoordinate.getKey()][nextCoordinate.getValue()].getChessPiece();
+    this.moveHistory.add(move);
+    ChessPiece otherPiece = cells[nextCoordinates.getKey()][nextCoordinates.getValue()].getChessPiece();
     if (otherPiece != null) {
       otherPiece.setPieceStatus(PieceStatus.REMOVED);
+      move.setKilledPieceId(otherPiece.getPieceId());
       if(otherPiece.isCheckMatePiece()){
         deciderPieceStatus.put(otherPiece.getPieceColor(), false);
       }
     }
-    boardSquares[nextCoordinate.getKey()][nextCoordinate.getValue()] = boardSquare;
+    move.setFromPosition(currentCoordinates);
+    move.setToPosition(nextCoordinates);
+    cells[nextCoordinates.getKey()][nextCoordinates.getValue()] = cell;
     return true;
   }
 
@@ -75,7 +85,7 @@ public class ChessBoard {
         nextCoordinate.getValue() > 7) {
       return false;
     }
-    if (boardSquares[nextCoordinate.getKey()][nextCoordinate.getValue()].getChessPiece().getPieceColor() ==
+    if (cells[nextCoordinate.getKey()][nextCoordinate.getValue()].getChessPiece().getPieceColor() ==
         pieceColor) {
       return false;
     }

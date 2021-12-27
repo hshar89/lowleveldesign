@@ -9,17 +9,16 @@ public class Player {
   private boolean isRobot;
   private PieceColor pieceColor;
   private List<ChessPiece> chessPieces;
-  private ChessBoard chessBoard;
+  private long timeLeft;
   private Match match;
 
   public Player(boolean isAnonymousUser, boolean isRobot,
-                PieceColor pieceColor, ChessBoard chessBoard, Match match) {
+                PieceColor pieceColor, Match match) {
     this.playerId = UUID.randomUUID().toString();
     this.isAnonymousUser = isAnonymousUser;
     this.isRobot = isRobot;
     this.match = match;
     this.pieceColor = pieceColor;
-    this.chessBoard = chessBoard;
   }
 
   public String getPlayerId() {
@@ -39,11 +38,11 @@ public class Player {
   }
 
   public List<ChessPiece> getChessPieces() {
-    return chessBoard.getChessPieces(pieceColor);
+    return match.getChessPiecesForPlayer(pieceColor);
   }
 
   public boolean makeMove(ChessPiece chessPiece, Move move) {
-    return chessBoard.makeMove(chessPiece, move);
+    return match.makeMove(chessPiece, move, playerId);
   }
 
   public boolean cancelMatch() {

@@ -8,7 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-public class Horse extends ChessPiece{
+public class Knight extends ChessPiece{
 
   private static final Map<String, Map<PieceColor, Queue<Pair<Integer, Integer>>>> mapOfHorsePieces = new ConcurrentHashMap<>();
 
@@ -38,10 +38,10 @@ public class Horse extends ChessPiece{
     if(initialPosition==null){
       return null;
     }
-    Horse horse = new Horse(pieceId, pieceColor, initialPosition);
-    return horse;
+    Knight knight = new Knight(pieceId, pieceColor, initialPosition);
+    return knight;
   }
-  private Horse(int pieceId, PieceColor pieceColor, Pair<Integer, Integer> initialPosition) {
+  private Knight(int pieceId, PieceColor pieceColor, Pair<Integer, Integer> initialPosition) {
     super(pieceId, pieceColor, initialPosition, false);
   }
 

@@ -6,7 +6,8 @@ public class TwoAndHalfMove extends Move{
 
   private Direction direction;
 
-  public TwoAndHalfMove(Direction direction) {
+  public TwoAndHalfMove(String playerId, Integer pieceId, Direction direction) {
+    super(playerId, pieceId);
     this.direction = direction;
   }
 

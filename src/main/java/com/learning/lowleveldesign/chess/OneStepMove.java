@@ -6,7 +6,8 @@ public class OneStepMove extends Move{
 
   private Direction direction;
 
-  public OneStepMove(Direction direction) {
+  public OneStepMove(String playerId, Integer pieceId, Direction direction) {
+    super(playerId, pieceId);
     this.direction = direction;
   }
 
