@@ -6,7 +6,7 @@ import com.learning.lowleveldesign.logger.impl.LoggerImpl;
 public class Application
 {
   public static void main(String[] args){
-    Logger logger = LoggerImpl.getInstance();
+    Logger logger = new LoggerImpl(2);
     logger.start("3");
     logger.poll();
     logger.start("1");

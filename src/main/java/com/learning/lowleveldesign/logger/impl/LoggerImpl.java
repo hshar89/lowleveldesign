@@ -1,13 +1,15 @@
 package com.learning.lowleveldesign.logger.impl;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -20,46 +22,45 @@ import com.learning.lowleveldesign.logger.model.LoggerProcess;
 public class LoggerImpl implements Logger {
 
   private final Map<String, LoggerProcess> processMap;
-  private final Queue<LoggerProcess> processQueue;
+  private final ConcurrentSkipListMap<Long, List<LoggerProcess>> processMapByTime;
   private final Lock lock;
-  private final List<CompletableFuture> futures;
+  private final BlockingQueue<CompletableFuture<String>> futuresBlockingQueue;
   private final ExecutorService[] executorServices;
 
-  private static final Logger INSTANCE = new LoggerImpl();
-
-  private LoggerImpl() {
-    this.processQueue = new LinkedBlockingQueue<>();
+  public LoggerImpl(int threads) {
+    this.processMapByTime = new ConcurrentSkipListMap<>();
     this.processMap = new ConcurrentHashMap<>();
     this.lock = new ReentrantLock();
-    this.futures = new CopyOnWriteArrayList<>();
-    this.executorServices = new ExecutorService[10];
-  }
-
-  public static Logger getInstance() {
-    return INSTANCE;
+    this.futuresBlockingQueue = new LinkedBlockingQueue<>();
+    this.executorServices = new ExecutorService[threads];
+    for (int i = 0; i < 10; i++) {
+      executorServices[i] = Executors.newSingleThreadExecutor();
+    }
   }
 
   @Override
   public void start(String processId) {
-    executorServices[processId.hashCode()%executorServices.length].execute(()->{
-      LoggerProcess process = new LoggerProcess(processId, System.currentTimeMillis());
+    executorServices[processId.hashCode() % executorServices.length].execute(() -> {
+      long startTime = System.currentTimeMillis();
+      LoggerProcess process = new LoggerProcess(processId, startTime);
       processMap.put(processId, process);
-      processQueue.add(process);
+      processMapByTime.computeIfAbsent(startTime, k -> new ArrayList<>()).add(process);
     });
   }
 
   @Override
   public void end(String processId) {
-    executorServices[processId.hashCode()%executorServices.length].execute(()->{
+    executorServices[processId.hashCode() % executorServices.length].execute(() -> {
       lock.lock();
       try {
         processMap.get(processId).setEndTime(System.currentTimeMillis());
-        if (!futures.isEmpty() && processQueue.peek().getProcessId().equalsIgnoreCase(processId)) {
-          pollProcess();
-          CompletableFuture completableFuture = futures.get(0);
-          futures.remove(0);
-          completableFuture.complete(null);
+        String result;
+        while (!futuresBlockingQueue.isEmpty() && (result = pollProcess()) != null) {
+          futuresBlockingQueue.take().complete(result);
         }
+      } catch (InterruptedException e) {
+        //e.printStackTrace();
+        System.out.println("interupted while take from queue");
       } finally {
         lock.unlock();
       }
@@ -69,28 +70,45 @@ public class LoggerImpl implements Logger {
   @Override
   public String poll() {
     lock.lock();
+    CompletableFuture future = new CompletableFuture<String>();
     try {
-      CompletableFuture future = new CompletableFuture<String>();
-      if (!processQueue.isEmpty() && processMap.get(processQueue.peek().getProcessId()).getEndTime() != -1) {
-        pollProcess();
+      String result;
+      if (!futuresBlockingQueue.isEmpty()) {
+        futuresBlockingQueue.offer(future);
+      } else if ((result = pollProcess()) != null) {
+        return result;
       } else {
-        futures.add(future);
+        futuresBlockingQueue.add(future);
       }
-      future.get(3, TimeUnit.SECONDS);
-    } catch (ExecutionException | InterruptedException | TimeoutException e) {
-      throw new RuntimeException(e);
     } finally {
       lock.unlock();
+    }
+    try {
+      future.get(10, TimeUnit.SECONDS);
+    } catch (ExecutionException | InterruptedException | TimeoutException e) {
+      //throw new RuntimeException(e);
+      System.out.println("throwing exception on future wait");
     }
     return null;
   }
 
   private String pollProcess() {
-    LoggerProcess loggerProcess = processQueue.poll();
-    System.out.println(
-        "Process " + loggerProcess.getProcessId() + " started at " + loggerProcess.getStartTime() + " ended at " +
-            loggerProcess.getEndTime());
-    processMap.remove(loggerProcess.getProcessId());
-    return loggerProcess.getProcessId();
+    if (!processMapByTime.isEmpty()) {
+      for (LoggerProcess loggerProcess : processMapByTime.firstEntry().getValue()) {
+        if (loggerProcess.getEndTime() != -1) {
+          processMapByTime.firstEntry().getValue().remove(loggerProcess);
+          if (processMapByTime.firstEntry().getValue().isEmpty()) {
+            processMapByTime.pollFirstEntry();
+          }
+          String template =
+              "Process " + loggerProcess.getProcessId() + " started at " + loggerProcess.getStartTime() + " ended at " +
+                  loggerProcess.getEndTime();
+          System.out.println(template);
+          processMap.remove(loggerProcess.getProcessId());
+          return template;
+        }
+      }
+    }
+    return null;
   }
 }
