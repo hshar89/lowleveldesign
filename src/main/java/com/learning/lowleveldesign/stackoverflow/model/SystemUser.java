@@ -16,4 +16,9 @@ public class SystemUser extends Person{
   public String getUserId() {
     return userId;
   }
+
+  public Account getAccount() {
+    return account;
+  }
+
 }

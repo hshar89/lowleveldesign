@@ -9,4 +9,21 @@ public class EditHistory {
   private Date createdDate;
   private String prevousQuestion;
   private String newQuestion;
+
+  public EditHistory(String userId, Integer questionId, Date createdDate, String prevousQuestion,
+                     String newQuestion) {
+    this.userId = userId;
+    this.questionId = questionId;
+    this.createdDate = createdDate;
+    this.prevousQuestion = prevousQuestion;
+    this.newQuestion = newQuestion;
+  }
+
+  public Integer getEditHistoryId() {
+    return editHistoryId;
+  }
+
+  public void setEditHistoryId(Integer editHistoryId) {
+    this.editHistoryId = editHistoryId;
+  }
 }

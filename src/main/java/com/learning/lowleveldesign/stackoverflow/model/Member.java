@@ -59,4 +59,10 @@ public class Member extends SystemUser{
   public boolean restoreQuestion(Integer questionId){
     return true;
   }
+
+  public boolean addQuestionToWatchList(Integer questionId){
+    questionAnswerService.addObserver(questionId, getUserId());
+    return true;
+  }
+
 }
