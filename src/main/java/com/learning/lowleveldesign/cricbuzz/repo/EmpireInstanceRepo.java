@@ -2,7 +2,7 @@ package com.learning.lowleveldesign.cricbuzz.repo;
 
 import java.util.List;
 
-import com.graph.lld.cricbuzz.model.EmpireInstance;
+import com.learning.lowleveldesign.cricbuzz.model.EmpireInstance;
 
 public interface EmpireInstanceRepo {
   boolean addEmpireInstance(EmpireInstance empireInstance);

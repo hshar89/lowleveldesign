@@ -2,7 +2,7 @@ package com.learning.lowleveldesign.cricbuzz.repo;
 
 import java.util.List;
 
-import com.graph.lld.cricbuzz.model.CommentatorInstance;
+import com.learning.lowleveldesign.cricbuzz.model.CommentatorInstance;
 
 public interface CommentatorInstanceRepo {
   boolean addCommentorInstance(CommentatorInstance commentatorInstance);

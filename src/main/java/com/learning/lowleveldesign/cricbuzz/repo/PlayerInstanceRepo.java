@@ -2,7 +2,7 @@ package com.learning.lowleveldesign.cricbuzz.repo;
 
 import java.util.List;
 
-import com.graph.lld.cricbuzz.model.PlayerInstance;
+import com.learning.lowleveldesign.cricbuzz.model.PlayerInstance;
 
 public interface PlayerInstanceRepo {
   boolean addPlayerInstance(PlayerInstance playerInstance);
