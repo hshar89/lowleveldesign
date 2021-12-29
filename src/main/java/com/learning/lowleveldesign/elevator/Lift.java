@@ -12,50 +12,64 @@ public class Lift {
   private Command currentCommandInExecution;
   private final Integer maxFloorNumber;
   private final Integer minFloorNumber;
-  private LiftStatus liftStatus;
+  private boolean isLiftIdle;
+  private final Integer maxLoad;
+  private final Integer maxPassengers;
+  private LiftCondition liftCondition;
   private final LiftDoor liftDoor;
-  private final Fan fan;
+  private final Button fanButton;
   private final Motor motor;
-  private final Alarm alarm;
+  private final Button alarmButton;
 
   public Lift(String liftId, Integer maxFloorNumber, Integer minFloorNumber,
-              LiftDoor liftDoor, Fan fan, Motor motor, Alarm alarm) {
+              Integer maxLoad, Integer maxPassengers, LiftDoor liftDoor,
+              Button fanButton, Motor motor, Button alarmButton) {
     this.liftId = liftId;
     this.maxFloorNumber = maxFloorNumber;
     this.minFloorNumber = minFloorNumber;
+    this.maxLoad = maxLoad;
+    this.maxPassengers = maxPassengers;
     this.liftDoor = liftDoor;
-    this.fan = fan;
+    this.fanButton = fanButton;
     this.motor = motor;
-    this.alarm = alarm;
+    this.alarmButton = alarmButton;
     this.upDirectionQueue = new TreeSet<>(Comparator.comparingInt(Command::getFloorNum));
     this.downDirectionQueue = new TreeSet<>((o1, o2) -> o2.getFloorNum() - o1.getFloorNum());
-    this.liftStatus = LiftStatus.WORKING;
+    this.liftCondition = LiftCondition.WORKING;
     this.currentDirection = Direction.UP;
+    this.isLiftIdle = true;
     this.currentFloorNumber = minFloorNumber;
   }
 
-  public void changeFanState(boolean turnOn) {
-    if (turnOn) {
-      fan.setFanStatus(FanStatus.ON);
-    } else {
-      fan.setFanStatus(FanStatus.OFF);
-    }
+  public void turnOnFan(boolean turnOn) {
+    this.fanButton.performAction(turnOn);
   }
 
-  public void emergencyAlarm(boolean turnOn) {
-    if (turnOn) {
-      alarm.turnOnAlarm();
+  public void setEmergencyAlarm(boolean turnOn) {
+    this.alarmButton.performAction(turnOn);
+  }
+
+  public void assignFloorToLift(Integer floorNum) {
+    if (floorNum < currentFloorNumber) {
+      downDirectionQueue.add(new Command(floorNum));
+      if(isLiftIdle){
+        currentDirection = Direction.DOWN;
+        isLiftIdle = false;
+      }
     } else {
-      alarm.turnOffAlarm();
+      upDirectionQueue.add(new Command(floorNum));
+      if(isLiftIdle){
+        currentDirection = Direction.UP;
+        isLiftIdle = false;
+      }
     }
+    updateCurrentCommand();
   }
 
   public boolean selectFloor(int floorId) {
-    if (floorId > maxFloorNumber || floorId < minFloorNumber) {
-      return false;
-    }
     if (floorId == currentFloorNumber) {
-      if (!liftDoor.getLiftDoorStatus().equals(LiftDoorStatus.CLOSED)) {
+      if (!liftDoor.getLiftDoorStatus().equals(LiftDoorStatus.CLOSED) || isLiftIdle) {
+        liftDoor.openDoor();
         return false;
       } else {
         if (currentDirection.equals(Direction.UP)) {
@@ -71,24 +85,23 @@ public class Lift {
         upDirectionQueue.add(new Command(floorId));
       }
     }
-    if ((currentDirection.equals(Direction.UP) &&
-        !currentCommandInExecution.getFloorNum().equals(upDirectionQueue.first().getFloorNum())) ||
-        (currentDirection.equals(Direction.UP) &&
-            !currentCommandInExecution.getFloorNum().equals(downDirectionQueue.first().getFloorNum()))) {
-      updateCurrentCommand();
-    }
+    updateCurrentCommand();
     return true;
   }
 
   private void updateCurrentCommand() {
-    if (currentDirection.equals(Direction.UP)) {
-      currentCommandInExecution = upDirectionQueue.first();
-      motor.setMotorRateUpDirection(currentCommandInExecution.getFloorNum() - currentFloorNumber);
-    } else {
-      currentCommandInExecution = downDirectionQueue.first();
-      motor.setMotorRateDownDirection(currentFloorNumber - currentCommandInExecution.getFloorNum());
+    if ((currentDirection.equals(Direction.UP) &&
+        !currentCommandInExecution.getFloorNum().equals(upDirectionQueue.first().getFloorNum())) ||
+        (currentDirection.equals(Direction.DOWN) &&
+            !currentCommandInExecution.getFloorNum().equals(downDirectionQueue.first().getFloorNum()))) {
+      if (currentDirection.equals(Direction.UP)) {
+        currentCommandInExecution = upDirectionQueue.first();
+        motor.setMotorRateUpDirection(currentCommandInExecution.getFloorNum() - currentFloorNumber);
+      } else {
+        currentCommandInExecution = downDirectionQueue.first();
+        motor.setMotorRateDownDirection(currentFloorNumber - currentCommandInExecution.getFloorNum());
+      }
     }
-
   }
 
   public boolean openDoor() {
@@ -112,6 +125,10 @@ public class Lift {
     return currentFloorNumber;
   }
 
+  public boolean isLiftIdle() {
+    return isLiftIdle;
+  }
+
   public boolean isDoorClosed() {
     return liftDoor.getLiftDoorStatus() == LiftDoorStatus.CLOSED;
   }
@@ -120,12 +137,14 @@ public class Lift {
     return currentDirection;
   }
 
-  public LiftStatus getLiftStatus() {
-    return liftStatus;
+  public LiftCondition getLiftStatus() {
+    return liftCondition;
   }
 
   private void stopLift() {
-    this.liftDoor.openDoor();
+    motor.haltMotor();
+    isLiftIdle = true;
+    currentDirection = Direction.NONE;
   }
 
   public void updateCurrentFloorOfLift(int floorId) {
@@ -133,7 +152,7 @@ public class Lift {
     if (currentDirection.equals(Direction.DOWN) && downDirectionQueue.first().getFloorNum() == floorId) {
       downDirectionQueue.pollFirst();
       if (downDirectionQueue.isEmpty() && upDirectionQueue.isEmpty()) {
-        motor.haltMotor();
+        stopLift();
       } else {
         this.currentDirection = Direction.UP;
         updateCurrentCommand();
@@ -141,16 +160,11 @@ public class Lift {
     } else if (currentDirection.equals(Direction.UP) && upDirectionQueue.first().getFloorNum() == floorId) {
       upDirectionQueue.pollFirst();
       if (downDirectionQueue.isEmpty() && upDirectionQueue.isEmpty()) {
-        motor.haltMotor();
+        stopLift();
       } else {
         this.currentDirection = Direction.DOWN;
         updateCurrentCommand();
       }
-    }
-    if (floorId == minFloorNumber) {
-      currentDirection = Direction.UP;
-    } else if (floorId == maxFloorNumber) {
-      currentDirection = Direction.DOWN;
     }
   }
 

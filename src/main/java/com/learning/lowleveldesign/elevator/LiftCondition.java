@@ -1,5 +1,5 @@
 package com.learning.lowleveldesign.elevator;
 
-public enum LiftStatus {
+public enum LiftCondition {
   WORKING, ABANDONED, MAINTENANCE;
 }
