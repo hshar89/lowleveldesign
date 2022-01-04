@@ -10,4 +10,10 @@ public interface UserExpenseMappingRepo {
   List<UserExpenseMapping> getAllExpensesWhereUserOwes(String userId);
 
   List<UserExpenseMapping> getAllExpensesWhereUserIsOwed(String userId);
+
+  List<UserExpenseMapping> getAllExpenseByOwedAndOweeId(String owedToUserId, String owedByUserId);
+
+  void deleteUserExpenseMappingsById(List<String> userExpenseMappingsToDelete);
+
+  void updateMappings(UserExpenseMapping userExpenseMappingsToUpdate);
 }

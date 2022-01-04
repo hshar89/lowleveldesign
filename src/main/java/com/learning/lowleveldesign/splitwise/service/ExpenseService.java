@@ -1,7 +1,6 @@
 package com.learning.lowleveldesign.splitwise.service;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,8 +9,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.tuple.Pair;
-
+import com.learning.lowleveldesign.splitwise.model.ActivityRequest;
+import com.learning.lowleveldesign.splitwise.model.ActivityType;
 import com.learning.lowleveldesign.splitwise.model.Expense;
 import com.learning.lowleveldesign.splitwise.model.ExpenseRequest;
 import com.learning.lowleveldesign.splitwise.model.GroupExpenseSummary;
@@ -29,6 +28,7 @@ public class ExpenseService {
   private UserExpenseRepo userExpenseRepo;
   private UserRepo userRepo;
   private UserExpenseMappingRepo userExpenseMappingRepo;
+  private ActivityService activityService;
 
   public List<GroupExpenseSummary> getAllExpensesForAGroup(String groupId) {
     List<Expense> expenses = expenseRepo.getAllExpensesForAGroup(groupId);
@@ -129,11 +129,50 @@ public class ExpenseService {
           pamount.getUserId(), diff);
       userExpenseMappingRepo.saveUserExpenseMapping(userExpenseMapping);
     }
+    User user = userRepo.getUserById(expenseRequest.getAdded_by_user_id());
+    ActivityRequest activityRequest = new ActivityRequest(expenseRequest.getAdded_by_user_id(),
+        expenseRequest.getDescription() + " created by " + user.getName(), ActivityType.ADDEXPENSE,
+        expenseRequest.getGroupId(), expenseRequest.getUserIdWithUserShareAndAmountPaidMap().keySet().stream().collect(
+        Collectors.toList()));
+    activityService.createActivityForExpenseAddition(activityRequest);
     return expense.getExpenseId();
   }
 
   public boolean settleDebt(String owedToUserId, String owedByUserId, double amount_to_settle) {
-    return false;
+    List<UserExpenseMapping> expensesOne =
+        userExpenseMappingRepo.getAllExpenseByOwedAndOweeId(owedToUserId, owedByUserId);
+    List<UserExpenseMapping> expensesTwo =
+        userExpenseMappingRepo.getAllExpenseByOwedAndOweeId(owedByUserId, owedToUserId);
+    List<String> userExpenseMappingsToDelete = new ArrayList<>();
+    userExpenseMappingsToDelete.addAll(
+        expensesTwo.stream().map(userExpenseMapping -> userExpenseMapping.getId()).collect(
+            Collectors.toList()));
+    amount_to_settle = amount_to_settle +
+        expensesTwo.stream().map(userExpenseMapping -> userExpenseMapping.getAmount()).reduce(Double::sum).get();
+    expensesOne.sort((uem1, uem2) -> uem1.getAmount() <= uem2.getAmount() ? 1 : -1);
+    UserExpenseMapping userExpenseMappingsToUpdate = null;
+    for (UserExpenseMapping userExpenseMapping : expensesOne) {
+      if (amount_to_settle >= userExpenseMapping.getAmount()) {
+        userExpenseMappingsToDelete.add(userExpenseMapping.getId());
+        amount_to_settle -= userExpenseMapping.getAmount();
+      } else {
+        userExpenseMappingsToUpdate = userExpenseMapping;
+        userExpenseMapping.setAmount(userExpenseMapping.getAmount() - amount_to_settle);
+        amount_to_settle = 0;
+      }
+      if (amount_to_settle == 0) {
+        break;
+      }
+    }
+    userExpenseMappingRepo.deleteUserExpenseMappingsById(userExpenseMappingsToDelete);
+    if (userExpenseMappingsToUpdate != null) {
+      userExpenseMappingRepo.updateMappings(userExpenseMappingsToUpdate);
+    }
+    return true;
+  }
+
+  public void deleteExpense(String expenseId) {
+
   }
 
   private static class BalanceAmount {

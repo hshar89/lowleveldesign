@@ -48,4 +48,8 @@ public class User extends SystemUser{
   public boolean settleDebtBetweenUsers(String owedToUserId, double amount_to_settle){
     return expenseService.settleDebt(owedToUserId, getId(), amount_to_settle);
   }
+
+  public void deleteExpense(String expenseId){
+    expenseService.deleteExpense(expenseId);
+  }
 }
